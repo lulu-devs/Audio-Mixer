@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audio Mixer</title>
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+body {
+    background-color: #121214;
+    color: #ffffff;
+    font-family: sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+.container {
+    background: #ffffff;
+    color: #000000;
+    padding: 30px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+h1 {
+    font-size: 20px;
+    margin-bottom: 24px;
+    text-align: center;
+    color: #ffffff;
+    background: #000000;
+    padding: 8px;
+    border-radius: 6px;
+}
+.track-card {
+    background: #ffffff;
+    border: 1px solid #e4e4e7;
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    color: #000000;
+}
+.file-label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #52525b;
+}
+input[type="file"] {
+    display: none;
+}
+.upload-btn {
+    display: inline-block;
+    padding: 8px 16px;
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #000000;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.upload-btn:hover {
+    background: #f4f4f5;
+}
+.file-name {
+    margin-left: 10px;
+    font-size: 13px;
+    color: #52525b;
+}
+.slider-container {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.slider-container label {
+    font-size: 12px;
+    width: 50px;
+    color: #000000;
+}
+input[type="range"] {
+    flex: 1;
+    accent-color: #ffffff;
+    cursor: pointer;
+}
+.controls {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: center;
+}
+.play-btn {
+    padding: 12px 36px;
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #000000;
+    border-radius: 24px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+}
+.play-btn:hover {
+    background: #f4f4f5;
+}
+.seek-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.time-display {
+    font-size: 12px;
+    color: #52525b;
+    width: 45px;
+    text-align: center;
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Audio Mixer</h1>
+    
+    <div class="track-card">
+        <span class="file-label">トラック 1 (ボーカル等)</span>
+        <label class="upload-btn">
+            ファイル選択
+            <input type="file" id="file1" accept="audio/*">
+        </label>
+        <span class="file-name" id="fileName1">未選択</span>
+        <div class="slider-container">
+            <label>音量</label>
+            <input type="range" id="vol1" min="0" max="1" step="0.01" value="1">
+            <span id="val1">100%</span>
+        </div>
+    </div>
+
+    <div class="track-card">
+        <span class="file-label">トラック 2 (伴奏等)</span>
+        <label class="upload-btn">
+            ファイル選択
+            <input type="file" id="file2" accept="audio/*">
+        </label>
+        <span class="file-name" id="fileName2">未選択</span>
+        <div class="slider-container">
+            <label>音量</label>
+            <input type="range" id="vol2" min="0" max="1" step="0.01" value="1">
+            <span id="val2">100%</span>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="play-btn" id="playBtn">再生</button>
+        <div class="seek-container">
+            <span class="time-display" id="currentTime">00:00</span>
+            <input type="range" id="seekBar" min="0" max="100" value="0" step="0.1">
+            <span class="time-display" id="duration">00:00</span>
+        </div>
+    </div>
+</div>
+
+<script>
+const audio1 = new Audio();
+const audio2 = new Audio();
+
+const file1Input = document.getElementById('file1');
+const file2Input = document.getElementById('file2');
+const fileName1 = document.getElementById('fileName1');
+const fileName2 = document.getElementById('fileName2');
+
+const vol1 = document.getElementById('vol1');
+const vol2 = document.getElementById('vol2');
+const val1 = document.getElementById('val1');
+const val2 = document.getElementById('val2');
+
+const playBtn = document.getElementById('playBtn');
+const seekBar = document.getElementById('seekBar');
+const currentTimeEl = document.getElementById('currentTime');
+const durationEl = document.getElementById('duration');
+
+let isPlaying = false;
+
+file1Input.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        fileName1.textContent = file.name;
+        audio1.src = URL.createObjectURL(file);
+        updateDuration();
+    }
+});
+
+file2Input.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        fileName2.textContent = file.name;
+        audio2.src = URL.createObjectURL(file);
+        updateDuration();
+    }
+});
+
+vol1.addEventListener('input', (e) => {
+    audio1.volume = e.target.value;
+    val1.textContent = Math.round(e.target.value * 100) + '%';
+});
+
+vol2.addEventListener('input', (e) => {
+    audio2.volume = e.target.value;
+    val2.textContent = Math.round(e.target.value * 100) + '%';
+});
+
+playBtn.addEventListener('click', () => {
+    if (!audio1.src && !audio2.src) return;
+
+    if (isPlaying) {
+        audio1.pause();
+        audio2.pause();
+        playBtn.textContent = '再生';
+    } else {
+        audio1.play();
+        audio2.play();
+        playBtn.textContent = '停止';
+    }
+    isPlaying = !isPlaying;
+});
+
+audio1.addEventListener('timeupdate', syncProgress);
+audio2.addEventListener('timeupdate', syncProgress);
+
+function syncProgress() {
+    const current = audio1.currentTime || audio2.currentTime || 0;
+    const dur = getMaxDuration();
+    if (dur > 0) {
+        seekBar.value = (current / dur) * 100;
+        currentTimeEl.textContent = formatTime(current);
+    }
+}
+
+seekBar.addEventListener('input', (e) => {
+    const dur = getMaxDuration();
+    if (dur > 0) {
+        const seekTo = (e.target.value / 100) * dur;
+        audio1.currentTime = seekTo;
+        audio2.currentTime = seekTo;
+        currentTimeEl.textContent = formatTime(seekTo);
+    }
+});
+
+function getMaxDuration() {
+    const d1 = isNaN(audio1.duration) ? 0 : audio1.duration;
+    const d2 = isNaN(audio2.duration) ? 0 : audio2.duration;
+    return Math.max(d1, d2);
+}
+
+function updateDuration() {
+    setTimeout(() => {
+        const dur = getMaxDuration();
+        durationEl.textContent = formatTime(dur);
+    }, 200);
+}
+
+function formatTime(sec) {
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+audio1.addEventListener('ended', handleEnded);
+audio2.addEventListener('ended', handleEnded);
+
+function handleEnded() {
+    if (audio1.ended && audio2.ended) {
+        isPlaying = false;
+        playBtn.textContent = '再生';
+        seekBar.value = 0;
+        currentTimeEl.textContent = '00:00';
+    }
+}
+</script>
+</body>
+</html>
